@@ -104,13 +104,12 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 
 MIT License - feel free to use this project for learning!
 
-Copyright (c) 2025 Anik
+Copyright (c) 2025 Anik Roy
 
 ## 🙏 Acknowledgments
 
 - Built with Next.js and React
 - UI components from shadcn/ui
-- AI powered by GROQ
 - Icons from Lucide
 
 ---
