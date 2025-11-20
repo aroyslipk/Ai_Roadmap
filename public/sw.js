@@ -1,6 +1,6 @@
 // Service Worker for offline support
-const CACHE_NAME = 'studywise-v1';
-const OFFLINE_CACHE = 'studywise-offline-v1';
+const CACHE_NAME = 'ai-roadmap-v1';
+const OFFLINE_CACHE = 'ai-roadmap-offline-v1';
 
 // Assets to cache immediately
 const PRECACHE_ASSETS = [

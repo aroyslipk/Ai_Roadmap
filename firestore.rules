@@ -1,5 +1,5 @@
 /**
- * @file Firestore Security Rules for StudyWise Application
+ * @file Firestore Security Rules for AI_Roadmap Application
  * @version Prototyping Mode - Authorization Focused
  *
  * @description This ruleset enforces a strict user-ownership model for personal data
