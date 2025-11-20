@@ -1,0 +1,229 @@
+/**
+ * @file Firestore Security Rules for StudyWise Application
+ * @version Prototyping Mode - Authorization Focused
+ *
+ * @description This ruleset enforces a strict user-ownership model for personal data
+ * (tasks, resources, notes, reminders, reset logs) stored under `/users/{userId}`.
+ * Read access to these collections is limited to the authenticated user who owns the data.
+ * Group chat messages are stored in a top-level `/chat_messages` collection and are publicly readable,
+ * but only authenticated users can create new messages. The days are stored in a top-level `/days` collection
+ * and are publicly readable. Data shape validation is relaxed to facilitate rapid prototyping.
+ *
+ * @dataStructure
+ * - `/users/{userId}`: User profile data (owned by the user with matching UID).
+ * - `/users/{userId}/days/{dayId}`: Curriculum days specific to a user.
+ * - `/users/{userId}/tasks/{taskId}`: Tasks specific to a user.
+ * - `/users/{userId}/resources/{resourceId}`: Resources specific to a user.
+ * - `/users/{userId}/notes/{noteId}`: Notes specific to a user.
+ * - `/users/{userId}/reminders/{reminderId}`: Reminders specific to a user.
+ * - `/users/{userId}/reset_logs/{resetLogId}`: Reset logs specific to a user.
+ * - `/days/{dayId}`: Pre-defined days in the study curriculum (publicly readable).
+ * - `/chat_messages/{chatMessageId}`: Group chat messages (publicly readable, auth required for write).
+ *
+ * @keySecurityDecisions
+ * - User data is strictly owned and only accessible by the authenticated user.
+ * - Listing of user documents is allowed to the owner.
+ * - Group chat messages are publicly readable to allow for simple group chat functionality.
+ * - Data shape validation is minimized to accelerate prototyping.
+ *
+ * @denormalizationForAuthorization
+ * - User-specific data (tasks, resources, notes, reminders, reset logs) is stored under
+ *   `/users/{userId}` paths, with `userId` also stored within the document. This allows
+ *   rules to efficiently verify ownership without additional `get()` calls.
+ * - Chat messages include the `userId` of the sender to allow for potential filtering or access
+ *   control in the future.  Currently, the `room` field is used for application-level filtering.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the request is made by an authenticated user.
+     * @param None
+     * @return {bool} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId - The user ID to compare against the authenticated user's ID.
+     * @return {bool} True if the user IDs match, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the existing document.
+     * @param {string} userId - The user ID of the document owner.
+     * @return {bool} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Rules for user profile documents.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user can create their own profile if the userId matches their auth.uid.
+     * @allow (get, update, delete) - Authenticated user can get, update, and delete their own profile.
+     * @deny (create) - Non-authenticated user cannot create a profile.
+     * @deny (get, update, delete) - Non-authenticated user cannot get, update, or delete any profile.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Listing users is not permitted.
+      allow create: if isOwner(userId) && request.resource.data.id == request.auth.uid;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Rules for days specific to a user.
+     * @path /users/{userId}/days/{dayId}
+     * @allow (create) - Authenticated user can create days under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own days.
+     * @deny (create) - Non-authenticated user cannot create days.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's days.
+     * @principle Restricts access to a user's own days.
+     */
+    match /users/{userId}/days/{dayId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for tasks specific to a user.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow (create) - Authenticated user can create tasks under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own tasks.
+     * @deny (create) - Non-authenticated user cannot create tasks.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's tasks.
+     * @principle Restricts access to a user's own tasks.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for resources specific to a user.
+     * @path /users/{userId}/resources/{resourceId}
+     * @allow (create) - Authenticated user can create resources under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own resources.
+     * @deny (create) - Non-authenticated user cannot create resources.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's resources.
+     * @principle Restricts access to a user's own resources.
+     */
+    match /users/{userId}/resources/{resourceId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for notes specific to a user.
+     * @path /users/{userId}/notes/{noteId}
+     * @allow (create) - Authenticated user can create notes under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own notes.
+     * @deny (create) - Non-authenticated user cannot create notes.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's notes.
+     * @principle Restricts access to a user's own notes.
+     */
+    match /users/{userId}/notes/{noteId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for reminders specific to a user.
+     * @path /users/{userId}/reminders/{reminderId}
+     * @allow (create) - Authenticated user can create reminders under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own reminders.
+     * @deny (create) - Non-authenticated user cannot create reminders.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's reminders.
+     * @principle Restricts access to a user's own reminders.
+     */
+    match /users/{userId}/reminders/{reminderId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for reset logs specific to a user.
+     * @path /users/{userId}/reset_logs/{resetLogId}
+     * @allow (create) - Authenticated user can create reset logs under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own reset logs.
+     * @deny (create) - Non-authenticated user cannot create reset logs.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot get, list, update, or delete another user's reset logs.
+     * @principle Restricts access to a user's own reset logs.
+     */
+    match /users/{userId}/reset_logs/{resetLogId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for user progress tracking (streaks, achievements, learning path).
+     * @path /users/{userId}/progress/{progressId}
+     * @allow (create) - Authenticated user can create progress documents under their userId.
+     * @allow (get, list, update, delete) - Authenticated user can get, list, update, and delete their own progress.
+     * @deny (create) - Non-authenticated user cannot create progress documents.
+     * @deny (get, list, update, delete) - Non-authenticated user cannot access another user's progress.
+     * @principle Restricts access to a user's own progress tracking data.
+     */
+    match /users/{userId}/progress/{progressId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for days, which are publicly readable.
+     * @path /days/{dayId}
+     * @allow (get, list) - Any user can read the days.
+     * @deny (create, update, delete) - No user can create, update, or delete days (admin only in future iterations).
+     * @principle Allows public read access to pre-defined days.
+     */
+    match /days/{dayId} {
+      allow get, list: if true;
+      allow create, update, delete: if false; // Days are pre-defined and not user-creatable in this version.
+    }
+
+    /**
+     * @description Rules for chat messages, which are publicly readable but only authenticated users can create them.
+     * @path /chat_messages/{chatMessageId}
+     * @allow (get, list) - Any user can read chat messages.
+     * @allow (create) - Authenticated user can create chat messages.
+     * @deny (update, delete) - No user can update or delete chat messages.
+     * @principle Allows public read access to chat messages but restricts write access to authenticated users.
+     */
+    match /chat_messages/{chatMessageId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
