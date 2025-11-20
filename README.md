@@ -20,12 +20,13 @@ Master AI and Data Science in 300 days with this comprehensive learning roadmap 
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15, React, TypeScript
-- **UI**: Tailwind CSS, shadcn/ui
-- **Backend**: Firebase (Auth, Firestore)
-- **AI**: GROQ API (Llama 3.1)
-- **Mobile**: Capacitor
-
+| Component | Technology |
+| :--- | :--- |
+| **Frontend** | ![Next JS](https://img.shields.io/badge/Next-black?style=flat-square&logo=next.js&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white) |
+| **Styling** | ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) ![Shadcn](https://img.shields.io/badge/shadcn%2Fui-000000?style=flat-square&logo=shadcnui&logoColor=white) |
+| **Backend** | ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat-square&logo=Firebase&logoColor=white) (Auth, Firestore) |
+| **AI Engine** | ![Groq](https://img.shields.io/badge/Groq-F54900?style=flat-square&logo=groq&logoColor=white) (Llama 3.1 Model) |
+| **Mobile** | ![Capacitor](https://img.shields.io/badge/Capacitor-1199EE?style=flat-square&logo=capacitor&logoColor=white) |
 ## Getting Started
 
 ### Prerequisites
